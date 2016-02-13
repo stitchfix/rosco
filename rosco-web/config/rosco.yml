@@ -65,6 +65,22 @@ aws:
     # TODO(duftler): Support additional operating systems.
     # TODO(duftler): Feels like just about everything here could be (optionally) specified per bake.
     - baseImage:
+        id: centos
+        shortDescription: amazon-linux
+        detailedDescription:
+        packageType: rpm
+      virtualizationSettings:
+      - region: us-east-1
+        virtualizationType: hvm
+        instanceType: m4.large
+        sourceAmi: ami-1d8ed777
+        sshUserName: ec2-user
+      - region: us-east-1
+        virtualizationType: pv
+        instanceType: m3.medium
+        sourceAmi: ami-1d8ed777
+        sshUserName: ec2-user
+    - baseImage:
         id: ubuntu
         shortDescription: v12.04
         detailedDescription: Ubuntu Precise Pangolin v12.04
