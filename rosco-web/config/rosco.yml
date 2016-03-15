@@ -57,7 +57,7 @@ aws:
   enabled: ${AWS_ENABLED:false}
   bakeryDefaults:
     awsAssociatePublicIpAddress: true
-    templateFile: aws-ebs.json
+    templateFile: aws-chroot.json
     defaultVirtualizationType: hvm
     baseImages:
     # TODO(duftler): Identify proper base amis.
