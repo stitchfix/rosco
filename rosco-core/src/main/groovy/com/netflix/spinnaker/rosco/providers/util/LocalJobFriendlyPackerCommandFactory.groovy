@@ -20,7 +20,7 @@ class LocalJobFriendlyPackerCommandFactory implements PackerCommandFactory {
 
   @Override
   List<String> buildPackerCommand(String baseCommand, Map<String, String> parameterMap, String absoluteTemplateFilePath) {
-    def packerCommand = ["sudo", "packer", "build", "-color=false"]
+    def packerCommand = ["packer", "build", "-color=false"]
 
     parameterMap.each { key, value ->
       if (key && value) {
