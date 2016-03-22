@@ -21,7 +21,7 @@ class DockerFriendlyPackerCommandFactory implements PackerCommandFactory {
   @Override
   List<String> buildPackerCommand(String baseCommand, Map<String, String> parameterMap, String templateFile) {
     def packerCommand = ["sh", "-c"]
-    def shellCommandStr = baseCommand + "_packer build -color=false"
+    def shellCommandStr = baseCommand + "sudo packer build -color=false"
 
     parameterMap.each { key, value ->
       if (key && value) {
