@@ -13,7 +13,7 @@
     "aws_enhanced_networking": "false",
     "appversion": "",
     "build_host": "",
-    "repository": "",
+    "repository": "http://nexus.vertigo.stitchfix.com/nexus/content/repositories/rpm-releases",
     "package_type": "",
     "packages": "",
     "upgrade": "",
