@@ -40,7 +40,7 @@ class DockerFriendlyPackerCommandFactorySpec extends Specification {
       def packerCommand = packerCommandFactory.buildPackerCommand("", parameterMap, templateFile)
 
     then:
-      packerCommand == ["sh", "-c", "packer build -color=false -var some_project_id=some-project " +
+      packerCommand == ["sh", "-c", "sudo packer build -color=false -var some_project_id=some-project " +
                                     "-var some_zone=us-central1-a -var some_source_image=ubuntu-1404-trusty-v20141212 " +
                                     "-var some_target_image=some-new-image " +
                                     "some-packer-template.json"]
@@ -54,7 +54,7 @@ class DockerFriendlyPackerCommandFactorySpec extends Specification {
       def packerCommand = packerCommandFactory.buildPackerCommand("", parameterMap, templateFile)
 
     then:
-      packerCommand == ["sh", "-c", "packer build -color=false some-packer-template.json"]
+      packerCommand == ["sh", "-c", "sudo packer build -color=false some-packer-template.json"]
   }
 
   void "packer command elides parameters with empty keys"() {
@@ -69,7 +69,7 @@ class DockerFriendlyPackerCommandFactorySpec extends Specification {
       def packerCommand = packerCommandFactory.buildPackerCommand("", parameterMap, templateFile)
 
     then:
-      packerCommand == ["sh", "-c", "packer build -color=false -var some_key_3=some-value-3 some-packer-template.json"]
+      packerCommand == ["sh", "-c", "sudo packer build -color=false -var some_key_3=some-value-3 some-packer-template.json"]
   }
 
   void "packer command elides parameters with empty values"() {
@@ -81,7 +81,7 @@ class DockerFriendlyPackerCommandFactorySpec extends Specification {
       def packerCommand = packerCommandFactory.buildPackerCommand("", parameterMap, templateFile)
 
     then:
-      packerCommand == ["sh", "-c", "packer build -color=false -var some_key_1=some-value some-packer-template.json"]
+      packerCommand == ["sh", "-c", "sudo packer build -color=false -var some_key_1=some-value some-packer-template.json"]
 
     when:
       parameterMap = [
@@ -91,7 +91,7 @@ class DockerFriendlyPackerCommandFactorySpec extends Specification {
       packerCommand = packerCommandFactory.buildPackerCommand("", parameterMap, templateFile)
 
     then:
-      packerCommand == ["sh", "-c", "packer build -color=false -var some_key_1=some-value some-packer-template.json"]
+      packerCommand == ["sh", "-c", "sudo packer build -color=false -var some_key_1=some-value some-packer-template.json"]
   }
 
   void "packer command quotes parameters with values that contain spaces"() {
@@ -103,7 +103,7 @@ class DockerFriendlyPackerCommandFactorySpec extends Specification {
       def packerCommand = packerCommandFactory.buildPackerCommand("", parameterMap, templateFile)
 
     then:
-      packerCommand == ["sh", "-c", "packer build -color=false -var some_key_1=some-value " +
+      packerCommand == ["sh", "-c", "sudo packer build -color=false -var some_key_1=some-value " +
                                     "-var \"some_key_2=some set of values\" some-packer-template.json"]
   }
 
@@ -117,7 +117,7 @@ class DockerFriendlyPackerCommandFactorySpec extends Specification {
         packerCommandFactory.buildPackerCommand("some base command ; ", parameterMap, templateFile)
 
     then:
-      packerCommand == ["sh", "-c", "some base command ; packer build -color=false -var some_key_1=some-value " +
+      packerCommand == ["sh", "-c", "some base command ; sudo packer build -color=false -var some_key_1=some-value " +
                                     "-var \"some_key_2=some set of values\" some-packer-template.json"]
   }
 

@@ -23,7 +23,7 @@ class LocalJobFriendlyPackerCommandFactorySpec extends Specification {
     where:
     something | baseCommand | expectedPackerCommand
     "sudo"    | "sudo"      | ["sudo", "packer", "build", "-color=false", "-var", "something=sudo"]
-    "null"    | null        | ["packer", "build", "-color=false", "-var", "something=null"]
-    "empty"   | ""          | ["packer", "build", "-color=false", "-var", "something=empty"]
+    "null"    | null        | ["sudo", "packer", "build", "-color=false", "-var", "something=null"]
+    "empty"   | ""          | ["sudo", "packer", "build", "-color=false", "-var", "something=empty"]
   }
 }
