@@ -99,7 +99,7 @@ class BakeryController {
 
       if (rebake == "1") {
         // TODO(duftler): Does it make sense to cancel here as well?
-        bakeStore.deleteBakeByKey(bakeKey)
+        bakeStore.deleteBakeByKeyButLeaveBakeIdKey(bakeKey)
       } else {
         def existingBakeStatus = queryExistingBakes(bakeKey)
 

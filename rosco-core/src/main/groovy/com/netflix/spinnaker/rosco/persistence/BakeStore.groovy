@@ -90,6 +90,11 @@ interface BakeStore {
   public boolean deleteBakeByKey(String bakeKey)
 
   /**
+   * Same as deleteBakeByKey but used if rebkake=1, so it does not delete the bakekey
+   */
+  public boolean deleteBakeByKeyButLeaveBakeIdKey(String bakeKey)
+
+  /**
    * Cancel the incomplete bake associated with the bake id. Delete the bake status, completed bake details and logs
    * associated with the bake id. If the bake is still incomplete, remove the bake id from the set of incomplete bakes.
    */

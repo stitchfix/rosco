@@ -161,6 +161,23 @@ class RedisBackedBakeStore implements BakeStore {
 
           return ret
         """)
+        deleteBakeByKeyButLeaveBakeIdKeySHA = jedis.scriptLoad("""\
+          -- Retrieve the bake id associated with bake key.
+          local bake_id = redis.call('HGET', KEYS[1], 'id')
+
+          -- Remove bake key from the set of bakes.
+          redis.call('ZREM', KEYS[2], KEYS[1])
+
+          -- Delete the bake key key.
+          local ret = redis.call('DEL', KEYS[1])
+
+          if bake_id then
+            -- Remove the bake id from the set of incomplete bakes.
+            redis.call('SREM', KEYS[3], bake_id)
+          end
+
+          return ret
+        """)
         cancelBakeByIdSHA = jedis.scriptLoad("""
           -- Retrieve the bake key associated with bake id.
           local bake_key = redis.call('HGET', KEYS[1], 'bakeKey')
@@ -309,6 +326,13 @@ class RedisBackedBakeStore implements BakeStore {
     def keyList = [bakeKey, "allBakes", incompleteBakesKey]
 
     return evalSHA("deleteBakeByKeySHA", keyList, []) == 1
+  }
+
+  @Override
+  public boolean deleteBakeByKeyButLeaveBakeIdKey(String bakeKey) {
+    def keyList = [bakeKey, "allBakes", incompleteBakesKey]
+
+    return evalSHA("deleteBakeByKeyButLeaveBakeIdKeySHA", keyList, []) == 1
   }
 
   @Override
