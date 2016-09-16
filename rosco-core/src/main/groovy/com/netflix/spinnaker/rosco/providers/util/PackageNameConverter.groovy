@@ -16,9 +16,13 @@
 
 package com.netflix.spinnaker.rosco.providers.util
 
+import com.netflix.frigga.ami.AppVersion
 import com.netflix.spinnaker.rosco.api.BakeRequest
+import com.netflix.spinnaker.rosco.api.BakeRequest.PackageType
 import groovy.transform.EqualsAndHashCode
+import groovy.util.logging.Slf4j
 
+@Slf4j
 class PackageNameConverter {
 
   @EqualsAndHashCode
@@ -27,31 +31,43 @@ class PackageNameConverter {
     String version
     String release
     String arch
+
+    public String qualifiedPackageName(PackageType packageType) {
+      if (version && release) {
+        "${name}${packageType.getVersionDelimiter()}${version}-${release}"
+      } else if (version) {
+        "${name}${packageType.getVersionDelimiter()}${version}"
+      } else {
+        return null
+      }
+    }
   }
 
   // Naming-convention for debs is name_version-release_arch.
   // For example: nflx-djangobase-enhanced_0.1-h12.170cdbd_all
   public static OsPackageName parseDebPackageName(String fullyQualifiedPackageName) {
     OsPackageName osPackageName = new OsPackageName()
+    if (!fullyQualifiedPackageName) return osPackageName
 
     osPackageName.with {
+      name = fullyQualifiedPackageName
+
       List<String> parts = fullyQualifiedPackageName?.tokenize("_")
 
       if (parts) {
-        name = parts[0]
-
-        if (parts.size > 1) {
+        if (parts.size() > 1) {
           List<String> versionReleaseParts = parts[1].tokenize("-")
 
           if (versionReleaseParts) {
             version = versionReleaseParts[0]
+            name = parts[0]
 
-            if (versionReleaseParts.size > 1) {
+            if (versionReleaseParts.size() > 1) {
               release = versionReleaseParts[1]
             }
           }
 
-          if (parts.size > 2) {
+          if (parts.size() > 2) {
             arch = parts[2]
           }
         }
@@ -65,23 +81,25 @@ class PackageNameConverter {
   // For example: nflx-djangobase-enhanced-0.1-h12.170cdbd.all
   public static OsPackageName parseRpmPackageName(String fullyQualifiedPackageName) {
     OsPackageName osPackageName = new OsPackageName()
+    if (!fullyQualifiedPackageName) return osPackageName
 
     osPackageName.with {
-      if (fullyQualifiedPackageName) {
-        int startOfArch = fullyQualifiedPackageName.lastIndexOf('.')
+      name = fullyQualifiedPackageName
 
-        if (startOfArch != -1) {
-          arch = fullyQualifiedPackageName.substring(startOfArch + 1)
-          fullyQualifiedPackageName = fullyQualifiedPackageName.substring(0, startOfArch)
-        }
+      List<String> nameParts = fullyQualifiedPackageName.tokenize(".")
+      int numberOfNameParts = nameParts.size()
 
-        List<String> parts = fullyQualifiedPackageName.tokenize("-")
+      if (numberOfNameParts >= 2) {
+        arch = nameParts.drop(numberOfNameParts - 1).join("")
+        fullyQualifiedPackageName = nameParts.take(numberOfNameParts - 1).join(".")
+      }
 
-        if (parts.size >= 3) {
-          release = parts.pop()
-          version = parts.pop()
-          name = parts.join("-")
-        }
+      List<String> parts = fullyQualifiedPackageName.tokenize("-")
+
+      if (parts.size() >= 3) {
+        release = parts.pop()
+        version = parts.pop()
+        name = parts.join("-")
       }
     }
 
@@ -89,7 +107,7 @@ class PackageNameConverter {
   }
 
   public static OsPackageName buildOsPackageName(BakeRequest.PackageType packageType, String packageName) {
-    switch(packageType) {
+    switch (packageType) {
       case BakeRequest.PackageType.DEB:
         return PackageNameConverter.parseDebPackageName(packageName)
       case BakeRequest.PackageType.RPM:
@@ -97,6 +115,12 @@ class PackageNameConverter {
       default:
         throw new IllegalArgumentException("Unrecognized packageType '$packageType'.")
     }
+  }
+
+  public static List<OsPackageName> buildOsPackageNames(BakeRequest.PackageType packageType, List<String> packageNames) {
+    packageNames.collect{ packageName ->
+      buildOsPackageName(packageType, packageName)
+    }.findAll{it.name}
   }
 
   public static String buildAppVersionStr(BakeRequest bakeRequest, OsPackageName osPackageName) {
@@ -118,13 +142,20 @@ class PackageNameConverter {
           }
 
           if (bakeRequest.job) {
-            appVersion += "/$bakeRequest.job/$bakeRequest.build_number"
+            // Travis job name and Jenkins job name with folder may contain slashes in the job name
+            // that make AppVersion.parseName fail. Replace all slashes in the job name with hyphens.
+            def job = bakeRequest.job.replaceAll("/", "-")
+            appVersion += "/$job/$bakeRequest.build_number"
           }
         }
       }
     }
 
+    if (!AppVersion.parseName(appVersion)) {
+      log.debug("AppVersion.parseName() was unable to parse appVersionStr =$appVersion.")
+      return null
+    }
+
     appVersion
   }
-
 }

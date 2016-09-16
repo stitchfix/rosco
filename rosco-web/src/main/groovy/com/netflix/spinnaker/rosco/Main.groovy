@@ -16,9 +16,13 @@
 
 package com.netflix.spinnaker.rosco
 
+import com.netflix.spinnaker.rosco.metrics.config.MetricsConfiguration
 import com.netflix.spinnaker.rosco.providers.aws.config.RoscoAWSConfiguration
+import com.netflix.spinnaker.rosco.providers.azure.config.RoscoAzureConfiguration
 import com.netflix.spinnaker.rosco.providers.docker.config.RoscoDockerConfiguration
 import com.netflix.spinnaker.rosco.providers.google.config.RoscoGoogleConfiguration
+import com.netflix.spinnaker.rosco.providers.openstack.config.RoscoOpenstackConfiguration
+import com.netflix.spinnaker.rosco.jobs.config.LocalJobConfig
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration
 import org.springframework.boot.autoconfigure.batch.BatchAutoConfiguration
 import org.springframework.boot.autoconfigure.groovy.template.GroovyTemplateAutoConfiguration
@@ -39,11 +43,11 @@ import javax.servlet.Filter
   "com.netflix.spinnaker.rosco.controllers",
   "com.netflix.spinnaker.rosco.executor",
   "com.netflix.spinnaker.rosco.filters",
+  "com.netflix.spinnaker.rosco.jobs",
   "com.netflix.spinnaker.rosco.persistence",
-  "com.netflix.spinnaker.rosco.rush",
   "com.netflix.spinnaker.config"
 ])
-@Import([RoscoAWSConfiguration, RoscoDockerConfiguration, RoscoGoogleConfiguration])
+@Import([RoscoAWSConfiguration, RoscoAzureConfiguration, RoscoDockerConfiguration, RoscoGoogleConfiguration, RoscoOpenstackConfiguration, LocalJobConfig, MetricsConfiguration])
 @EnableAutoConfiguration(exclude = [BatchAutoConfiguration, GroovyTemplateAutoConfiguration])
 @EnableScheduling
 class Main extends SpringBootServletInitializer {
@@ -63,7 +67,7 @@ class Main extends SpringBootServletInitializer {
   }
 
   @Override
-  SpringApplicationBuilder configure(SpringApplicationBuilder application) {
+  SpringApplicationBuilder configure(SpringApplicationBuilder builder) {
     builder.properties(DEFAULT_PROPS).sources(Main)
   }
 

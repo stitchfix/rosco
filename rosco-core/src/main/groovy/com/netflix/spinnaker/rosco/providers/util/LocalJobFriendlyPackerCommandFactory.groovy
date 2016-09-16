@@ -19,8 +19,11 @@ package com.netflix.spinnaker.rosco.providers.util
 class LocalJobFriendlyPackerCommandFactory implements PackerCommandFactory {
 
   @Override
-  List<String> buildPackerCommand(String baseCommand, Map<String, String> parameterMap, String absoluteTemplateFilePath) {
-    def packerCommand = ["sudo", "packer", "build", "-color=false"]
+  List<String> buildPackerCommand(String baseCommand,
+                                  Map<String, String> parameterMap,
+                                  String absoluteVarFilePath,
+                                  String absoluteTemplateFilePath) {
+    def packerCommand = [baseCommand, "packer", "build", "-color=false"]
 
     parameterMap.each { key, value ->
       if (key && value) {
@@ -29,6 +32,10 @@ class LocalJobFriendlyPackerCommandFactory implements PackerCommandFactory {
         packerCommand << "-var"
         packerCommand << keyValuePair.toString()
       }
+    }
+
+    if (absoluteVarFilePath) {
+      packerCommand << "-var-file=$absoluteVarFilePath"
     }
 
     packerCommand << absoluteTemplateFilePath

@@ -21,17 +21,15 @@ import com.netflix.spinnaker.rosco.api.BakeOptions
 import com.netflix.spinnaker.rosco.api.BakeOptions.BaseImage
 import com.netflix.spinnaker.rosco.api.BakeRequest
 import com.netflix.spinnaker.rosco.providers.util.ImageNameFactory
+import com.netflix.spinnaker.rosco.providers.util.PackageNameConverter
 import com.netflix.spinnaker.rosco.providers.util.PackerCommandFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 
 abstract class CloudProviderBakeHandler {
 
-  @Value('${rush.configDir}')
+  @Value('${rosco.configDir}')
   String configDir
-
-  @Autowired
-  ImageNameFactory imageNameFactory
 
   @Autowired
   PackerCommandFactory packerCommandFactory
@@ -56,6 +54,11 @@ abstract class CloudProviderBakeHandler {
   abstract BakeOptions getBakeOptions()
 
   /**
+   * @return An ImageNameFactory object for this specific cloud provider.
+   */
+  abstract ImageNameFactory getImageNameFactory()
+
+  /**
    * Build provider-specific naming component to use in composing bake key.
    */
   String produceProviderSpecificBakeKeyComponent(String region, BakeRequest bakeRequest) {
@@ -68,6 +71,8 @@ abstract class CloudProviderBakeHandler {
    * bake.
    */
   String produceBakeKey(String region, BakeRequest bakeRequest) {
+    // TODO(duftler): Consider whether template_file_name, extended_attributes and var_file_name should be
+    // taken into account when composing the bake key.
     bakeRequest.with {
       def bakeKey = "bake:$cloud_provider_type:$base_os"
 
@@ -77,9 +82,11 @@ abstract class CloudProviderBakeHandler {
 
       if (ami_name) {
         bakeKey += ":$ami_name"
-      } else {
-        bakeKey += ":$package_name"
       }
+
+      String packages = package_name ? package_name.tokenize().join('|') : ""
+
+      bakeKey += ":$packages"
 
       def providerSpecificBakeKeyComponent = produceProviderSpecificBakeKeyComponent(region, bakeRequest)
 
@@ -113,7 +120,7 @@ abstract class CloudProviderBakeHandler {
   /**
    * Returns a map containing the parameters that should be propagated to the packer template for this provider.
    */
-  abstract Map buildParameterMap(String region, def virtualizationSettings, String imageName, BakeRequest bakeRequest)
+  abstract Map buildParameterMap(String region, def virtualizationSettings, String imageName, BakeRequest bakeRequest, String appVersionStr)
 
   /**
    * Returns the command that should be prepended to the shell command passed to the container.
@@ -132,15 +139,25 @@ abstract class CloudProviderBakeHandler {
   abstract String getTemplateFileName()
 
   /**
-   * Build provider-specific script command for packer.
+   * Build provider-specific command for packer.
    */
   List<String> producePackerCommand(String region, BakeRequest bakeRequest) {
     def virtualizationSettings = findVirtualizationSettings(region, bakeRequest)
 
     BakeOptions.Selected selectedOptions = new BakeOptions.Selected(baseImage: findBaseImage(bakeRequest))
-    def (imageName, appVersionStr, packagesParameter) = imageNameFactory.deriveImageNameAndAppVersion(bakeRequest, selectedOptions)
+    BakeRequest.PackageType packageType = selectedOptions.baseImage.packageType
 
-    def parameterMap = buildParameterMap(region, virtualizationSettings, imageName, bakeRequest)
+    List<String> packageNameList = bakeRequest.package_name?.tokenize(" ")
+
+    def osPackageNames = PackageNameConverter.buildOsPackageNames(packageType, packageNameList)
+
+    def appVersionStr = imageNameFactory.buildAppVersionStr(bakeRequest, osPackageNames)
+
+    def imageName = imageNameFactory.buildImageName(bakeRequest, osPackageNames)
+
+    def packagesParameter = imageNameFactory.buildPackagesParameter(packageType, osPackageNames)
+
+    def parameterMap = buildParameterMap(region, virtualizationSettings, imageName, bakeRequest, appVersionStr)
 
     if (debianRepository && selectedOptions.baseImage.packageType == BakeRequest.PackageType.DEB) {
       parameterMap.repository = debianRepository
@@ -149,13 +166,7 @@ abstract class CloudProviderBakeHandler {
     }
 
     parameterMap.package_type = selectedOptions.baseImage.packageType.packageType
-
-    // TODO(duftler): Build out proper support for installation of packages.
     parameterMap.packages = packagesParameter
-
-    if (appVersionStr) {
-      parameterMap.appversion = appVersionStr
-    }
 
     if (bakeRequest.build_host) {
       parameterMap.build_host = bakeRequest.build_host
@@ -167,13 +178,34 @@ abstract class CloudProviderBakeHandler {
 
     parameterMap.configDir = configDir
 
-    if (bakeRequest.extended_attributes) {
-      parameterMap << bakeRequest.extended_attributes
+    bakeRequest.extended_attributes?.entrySet()?.forEach { attribute ->
+      switch (attribute.getKey()) {
+        case ['copy_to', 'share_with']:
+          parameterMap.putAll(unrollParameters(attribute))
+          break
+        default:
+          parameterMap.put(attribute.getKey(), attribute.getValue())
+      }
     }
 
-    def finalTemplateFileName = bakeRequest.template_file_name ?: templateFileName
+    def finalTemplateFileName = "$configDir/${bakeRequest.template_file_name ?: templateFileName}"
+    def finalVarFileName = bakeRequest.var_file_name ? "$configDir/$bakeRequest.var_file_name" : null
 
-    return packerCommandFactory.buildPackerCommand(baseCommand, parameterMap, "$configDir/$finalTemplateFileName")
+    return packerCommandFactory.buildPackerCommand(baseCommand,
+                                                   parameterMap,
+                                                   finalVarFileName,
+                                                   finalTemplateFileName)
+  }
+
+  protected Map unrollParameters(Map.Entry entry) {
+    String keyPrefix = entry.key + "_"
+    Map parameters = new HashMap()
+    entry.value.tokenize(",").eachWithIndex { String value, int i ->
+      int keyNumber = i + 1
+      parameters.put(keyPrefix + keyNumber, value.trim())
+    }
+
+    return parameters
   }
 
   BaseImage findBaseImage(BakeRequest bakeRequest) {
@@ -184,5 +216,14 @@ abstract class CloudProviderBakeHandler {
       throw new IllegalArgumentException("No virtualization settings found for '$bakeRequest.base_os'.")
     }
     return osVirtualizationSettings.baseImage
+  }
+
+  /**
+   * This allows providers to specify Packer variables names whose values will be masked with '******'
+   * in logging output. Subclasses should override this if they need to mask sensitive data sent to Packer.
+   * @return
+   */
+  List<String> getMaskedPackerParameters() {
+    return []
   }
 }

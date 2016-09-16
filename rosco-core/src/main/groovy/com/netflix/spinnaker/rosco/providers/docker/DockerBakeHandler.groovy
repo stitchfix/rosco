@@ -21,6 +21,7 @@ import com.netflix.spinnaker.rosco.api.BakeOptions
 import com.netflix.spinnaker.rosco.api.BakeRequest
 import com.netflix.spinnaker.rosco.providers.CloudProviderBakeHandler
 import com.netflix.spinnaker.rosco.providers.docker.config.RoscoDockerConfiguration
+import com.netflix.spinnaker.rosco.providers.util.ImageNameFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
@@ -30,7 +31,7 @@ public class DockerBakeHandler extends CloudProviderBakeHandler {
   private static final String BUILDER_TYPE = "docker"
   private static final String IMAGE_NAME_TOKEN = "Repository:"
 
-  static final String START_DOCKER_SERVICE_BASE_COMMAND = "sudo service docker start ; "
+  ImageNameFactory imageNameFactory = new DockerImageNameFactory()
 
   @Autowired
   RoscoDockerConfiguration.DockerBakeryDefaults dockerBakeryDefaults
@@ -66,17 +67,14 @@ public class DockerBakeHandler extends CloudProviderBakeHandler {
   }
 
   @Override
-  Map buildParameterMap(String region, def dockerVirtualizationSettings, String imageName, BakeRequest bakeRequest) {
+  Map buildParameterMap(String region, def dockerVirtualizationSettings, String imageName, BakeRequest bakeRequest, String appVersionStr) {
     return [
       docker_source_image     : dockerVirtualizationSettings.sourceImage,
       docker_target_image     : imageName,
+      docker_target_image_tag : appVersionStr,
       docker_target_repository: dockerBakeryDefaults.targetRepository
     ]
-  }
 
-  @Override
-  String getBaseCommand() {
-    return START_DOCKER_SERVICE_BASE_COMMAND
   }
 
   @Override

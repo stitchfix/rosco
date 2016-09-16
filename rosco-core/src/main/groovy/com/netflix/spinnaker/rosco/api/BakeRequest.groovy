@@ -25,7 +25,7 @@ import io.swagger.annotations.ApiModelProperty
 /**
  * A request to bake a new machine image.
  *
- * @see BakeryController#createBake
+ * @see BakeryController#createBake(String, BakeRequest, String)
  */
 @Immutable(copyWith = true)
 @CompileStatic
@@ -42,6 +42,8 @@ class BakeRequest {
   String build_number
   @ApiModelProperty("The commit hash of the CI build")
   String commit_hash
+  @ApiModelProperty("The CI Build Url")
+  String build_info_url
   @ApiModelProperty("The target platform")
   CloudProviderType cloud_provider_type
   Label base_label
@@ -56,14 +58,19 @@ class BakeRequest {
   String ami_name
   String ami_suffix
   Boolean upgrade
+  String instance_type
+  @ApiModelProperty("The image owner organization")
+  String organization
 
   @ApiModelProperty("The explicit packer template to use, instead of resolving one from rosco's configuration")
   String template_file_name
   @ApiModelProperty("A map of key/value pairs to add to the packer command")
   Map extended_attributes
+  @ApiModelProperty("The name of a json file containing key/value pairs to add to the packer command (must be in the same location as the template file)")
+  String var_file_name
 
   static enum CloudProviderType {
-    aws, docker, gce
+    aws, azure, docker, gce, openstack
   }
 
   static enum Label {

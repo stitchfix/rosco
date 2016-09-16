@@ -21,6 +21,7 @@ import com.netflix.spinnaker.rosco.api.BakeOptions
 import com.netflix.spinnaker.rosco.api.BakeRequest
 import com.netflix.spinnaker.rosco.providers.CloudProviderBakeHandler
 import com.netflix.spinnaker.rosco.providers.google.config.RoscoGoogleConfiguration
+import com.netflix.spinnaker.rosco.providers.util.ImageNameFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
@@ -29,6 +30,8 @@ public class GCEBakeHandler extends CloudProviderBakeHandler {
 
   private static final String BUILDER_TYPE = "googlecompute"
   private static final String IMAGE_NAME_TOKEN = "googlecompute: A disk image was created:"
+
+  ImageNameFactory imageNameFactory = new ImageNameFactory()
 
   @Autowired
   RoscoGoogleConfiguration.GCEBakeryDefaults gceBakeryDefaults
@@ -68,7 +71,7 @@ public class GCEBakeHandler extends CloudProviderBakeHandler {
   }
 
   @Override
-  Map buildParameterMap(String region, def gceVirtualizationSettings, String imageName, BakeRequest bakeRequest) {
+  Map buildParameterMap(String region, def gceVirtualizationSettings, String imageName, BakeRequest bakeRequest, String appVersionStr) {
     RoscoGoogleConfiguration.ManagedGoogleAccount managedGoogleAccount = googleConfigurationProperties?.accounts?.getAt(0)
 
     if (!managedGoogleAccount) {
@@ -89,6 +92,10 @@ public class GCEBakeHandler extends CloudProviderBakeHandler {
 
     if (gceBakeryDefaults.useInternalIp != null) {
       parameterMap.gce_use_internal_ip = gceBakeryDefaults.useInternalIp
+    }
+
+    if (appVersionStr) {
+      parameterMap.appversion = appVersionStr
     }
 
     return parameterMap

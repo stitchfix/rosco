@@ -21,6 +21,7 @@ import com.netflix.spinnaker.rosco.api.BakeOptions
 import com.netflix.spinnaker.rosco.api.BakeRequest
 import com.netflix.spinnaker.rosco.providers.CloudProviderBakeHandler
 import com.netflix.spinnaker.rosco.providers.aws.config.RoscoAWSConfiguration
+import com.netflix.spinnaker.rosco.providers.util.ImageNameFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
@@ -29,6 +30,8 @@ public class AWSBakeHandler extends CloudProviderBakeHandler {
 
   private static final String BUILDER_TYPE = "amazon-(chroot|ebs)"
   private static final String IMAGE_NAME_TOKEN = "amazon-(chroot|ebs): Creating the AMI:"
+
+  ImageNameFactory imageNameFactory = new ImageNameFactory()
 
   @Autowired
   RoscoAWSConfiguration.AWSBakeryDefaults awsBakeryDefaults
@@ -88,7 +91,7 @@ public class AWSBakeHandler extends CloudProviderBakeHandler {
   }
 
   @Override
-  Map buildParameterMap(String region, def awsVirtualizationSettings, String imageName, BakeRequest bakeRequest) {
+  Map buildParameterMap(String region, def awsVirtualizationSettings, String imageName, BakeRequest bakeRequest, String appVersionStr) {
     def parameterMap = [
       aws_region       : region,
       aws_ssh_username : awsVirtualizationSettings.sshUserName,
@@ -116,6 +119,14 @@ public class AWSBakeHandler extends CloudProviderBakeHandler {
 
     if (bakeRequest.enhanced_networking) {
       parameterMap.aws_enhanced_networking = true
+    }
+
+    if (bakeRequest.build_info_url) {
+      parameterMap.build_info_url = bakeRequest.build_info_url
+    }
+
+    if (appVersionStr) {
+      parameterMap.appversion = appVersionStr
     }
 
     return parameterMap

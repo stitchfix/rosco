@@ -16,6 +16,7 @@ configurations.all {
 
 dependencies {
   compile project(":rosco-core")
+  compile project(":rosco-metrics")
   spinnaker.group("bootWeb")
 }
 
@@ -87,12 +88,14 @@ ospackage {
     into('/etc/logrotate.d')
     user = 'root'
     permissionGroup = 'root'
+    fileMode = 0644
     fileType = CONFIG | NOREPLACE
   }
 
   configurationFile('/opt/rosco/config/rosco.yml')
   configurationFile('/opt/rosco/config/packer/aws-chroot.json')
   configurationFile('/opt/rosco/config/packer/aws-ebs.json')
+  configurationFile('/opt/rosco/config/packer/azure-linux.json')
   configurationFile('/opt/rosco/config/packer/gce.json')
   configurationFile('/opt/rosco/config/packer/install_packages.sh')
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Make rush fail the build on errors.
+# Make the build fail on errors.
 set -e
 
 # Strip the first part to avoid credentials leaks.
@@ -27,7 +27,10 @@ function provision_deb() {
   fi
 
   if [[ "$repository" != "" ]]; then
-    echo "deb $repository" | sudo tee /etc/apt/sources.list.d/spinnaker.list > /dev/null
+    IFS=';' read -ra repo <<< "$repository"
+    for i in "${repo[@]}"; do
+      echo "deb $i" | sudo tee -a /etc/apt/sources.list.d/spinnaker.list > /dev/null
+    done
   fi
 
   sudo apt-get update
@@ -42,6 +45,11 @@ function provision_deb() {
   if [[ "$disable_services" == "true" ]]; then
     echo "removing /usr/sbin/policy-rc.d"
     sudo rm -f /usr/sbin/policy-rc.d
+  fi
+
+  if [[ "$repository" != "" ]]; then
+    # Cleanup repository configuration
+    sudo rm /etc/apt/sources.list.d/spinnaker.list
   fi
 }
 
@@ -61,7 +69,13 @@ EOF
     sudo yum -y update
   fi
 
-  sudo yum -y install $packages
+  # Enforce the package installation order.
+  for package in $packages; do sudo yum -y install $package; done
+
+  if [[ "$repository" != "" ]]; then
+    # Cleanup repository configuration
+    sudo rm /etc/yum.repos.d/spinnaker.repo
+  fi
 }
 
 function main() {
